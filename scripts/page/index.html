@@ -20,6 +20,9 @@
             button {
                 padding: 1.1em;
                 font-size: 0.7em;
+                width: 90%;
+                margin: auto;
+                font-style: bold;
             }
             .content {
                 display: flex;
@@ -65,6 +68,18 @@
                 justify-content: center;
                 align-items: center;
             }
+            .div-button-capture {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                width: 100%;
+            }
+            .div-button-stream {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                width: 100%;
+            }
             .row-stream-options {
                 display: flex;
                 flex-direction: row;
@@ -80,7 +95,7 @@
                 <h1>R-Probe</h1>
             </div>
             <div class="row-content-stream">
-                <img src="http://placehold.it/800x600" id="stream-image">
+                <img src="" id="stream-image", alt="Waiting for input...">
             </div>
             <div class="row-sensor-values">
                 <div class="sensor-radiation">
@@ -93,11 +108,11 @@
                 </div>
             </div>
             <div class="row-stream-options">
-                <div class="capture-button" onclick="handleCaptureButton()">
-                    <button id="capture-button">Capture</button>
+                <div class="div-button-capture" onclick="handleCaptureButton()">
+                    <button id="button-capture">Capture</button>
                 </div>
-                <div class="stream-button" onclick="handleStreamButton()">
-                    <button id="stream-button">Start Stream</button>
+                <div class="div-button-stream" onclick="handleStreamButton()">
+                    <button id="button-stream">Start Stream</button>
                 </div>
             </div>
         </div>
@@ -141,6 +156,7 @@
                 throw new Error(`Expected e to be an HTMLImageElement, was ${e && e.constructor && e.constructor.name || e}`);
             }
             var baseUrl = document.location.origin;
+            streamimage.alt = "";
             streamimage.src = "";
             streamimage.src = `${baseUrl}/photo?${Math.random().toString(36).substring(7)}`;
         }
@@ -151,19 +167,28 @@
                 throw new Error(`Expected e to be an HTMLImageElement, was ${e && e.constructor && e.constructor.name || e}`);
             }
             var baseUrl = document.location.origin;
+            streamimage.alt = "";
             streamimage.src = "";
             streamimage.src = `${baseUrl}/stream`;
         }
         function handleCaptureButton()
         {
-            // Retrieve a frame from stream route
-            // Set radiation and distance data
-            updateRadiationAndDistanceData();
-            updateStreamImage();
+            // Retrieve a frame from stream route and sets radiation and distance data
+            // If streaming, stop streaming by calling handleStreamButton()
+            // and then update radiation and distance data
+            if (isStreaming == true) {
+                handleStreamButton();
+                updateRadiationAndDistanceData();
+            }
+            else
+            {
+                updateRadiationAndDistanceData();
+                updateStreamImage();
+            }
         }
         function handleStreamButton()
         {
-            var streamButton = document.getElementById("stream-button");
+            var streamButton = document.getElementById("button-stream");
             if (isStreaming == true) {
                 streamButton.innerHTML = "Start Stream";
                 isStreaming = false;
