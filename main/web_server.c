@@ -111,7 +111,7 @@ static esp_err_t index_handler(httpd_req_t *req)
 
 httpd_uri_t uri_get = 
 {
-    .uri = "/",
+    .uri = "/stream",
     .method = HTTP_GET,
     .handler = stream_handler,
     .user_ctx = NULL
@@ -133,7 +133,7 @@ httpd_handle_t setup_server(void)
     if (httpd_start(&stream_httpd , &config) == ESP_OK)
     {
         httpd_register_uri_handler(stream_httpd , &uri_get);
-        // httpd_register_uri_handler(stream_httpd, &index_uri);
+        httpd_register_uri_handler(stream_httpd, &index_uri);
     }
 
     return stream_httpd;
