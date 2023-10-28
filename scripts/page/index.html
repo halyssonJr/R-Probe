@@ -1,0 +1,183 @@
+<html>
+    <head>
+        <title>R-Probe</title>
+        <style>
+            /* center the content at screen, using flexbox */
+            /* increase font size on mobile devices */
+            body {
+                font-family: Arial, Helvetica, sans-serif;
+                display: flex;
+                align-items: center;
+                font-size: 2em;
+                background-color: #101012;
+                color: aliceblue;
+            }
+            input {
+                padding: 0.7em;
+                width: 100%;
+                font-size: 1em;
+            }
+            button {
+                padding: 1.1em;
+                font-size: 0.7em;
+            }
+            .content {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: stretch;
+                min-width: 800px;
+                max-width: 900px;
+                min-height: 800px;
+                max-height: 900px;
+                margin: auto;
+            }
+            .row-header-title {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+            }
+            .row-content-stream {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                min-width: 800px;
+                min-height: 600px;
+            }
+            .row-sensor-values {
+                display: flex;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px;
+            }
+            .sensor-radiation {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+            .sensor-distance {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+            .row-stream-options {
+                display: flex;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="content">
+            <div class="row-header-title">
+                <h1>R-Probe</h1>
+            </div>
+            <div class="row-content-stream">
+                <img src="http://placehold.it/800x600" id="stream-image">
+            </div>
+            <div class="row-sensor-values">
+                <div class="sensor-radiation">
+                    <p>Nível de Radiação (uRh)</p>
+                    <input id="radiation-value" type="text" value="0.00" readonly>
+                </div>
+                <div class="sensor-distance">
+                    <p>Distância (mm)</p>
+                    <input id="distance-value" type="text" value="0.00" readonly>
+                </div>
+            </div>
+            <div class="row-stream-options">
+                <div class="capture-button" onclick="handleCaptureButton()">
+                    <button id="capture-button">Capture</button>
+                </div>
+                <div class="stream-button" onclick="handleStreamButton()">
+                    <button id="stream-button">Start Stream</button>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+        var isStreaming = false;
+        var dataBuffer = "0.00;0.00";
+        var radiationValue = 0.00;
+        var distanceValue = 0.00;
+        var timeoutUpdateFunction = null;
+        var timeoutFrequency = 1000;
+        async function retrieveSensorData() {
+            // Retrieve data from data route
+            var response = await fetch('/data');
+            var data = await response.text();
+            dataBuffer = data;
+            radiationValue = dataBuffer.split(";")[0];
+            distanceValue = dataBuffer.split(";")[1];
+            return dataBuffer;
+        }
+        function getRadiationData() {
+            return radiationValue;
+        }
+        function getDistanceData() {
+            return distanceValue;
+        }
+        function updateRadiationAndDistanceData() {
+            // Update radiation and distance data
+            retrieveSensorData().then(function(data) {
+                var radiationValue = document.getElementById("radiation-value");
+                var distanceValue = document.getElementById("distance-value");
+                radiationValue.value = getRadiationData();
+                distanceValue.value = getDistanceData();
+            });
+        }
+        function updateStreamImage()
+        {
+            // Capture a single frame from the stream url and render on canvas
+            var streamimage = document.getElementById("stream-image");
+            if (!(streamimage instanceof HTMLImageElement)) {
+                throw new Error(`Expected e to be an HTMLImageElement, was ${e && e.constructor && e.constructor.name || e}`);
+            }
+            var baseUrl = document.location.origin;
+            streamimage.src = "";
+            streamimage.src = `${baseUrl}/photo?${Math.random().toString(36).substring(7)}`;
+        }
+        function activateStreamVideo()
+        {
+            var streamimage = document.getElementById("stream-image");
+            if (!(streamimage instanceof HTMLImageElement)) {
+                throw new Error(`Expected e to be an HTMLImageElement, was ${e && e.constructor && e.constructor.name || e}`);
+            }
+            var baseUrl = document.location.origin;
+            streamimage.src = "";
+            streamimage.src = `${baseUrl}/stream`;
+        }
+        function handleCaptureButton()
+        {
+            // Retrieve a frame from stream route
+            // Set radiation and distance data
+            updateRadiationAndDistanceData();
+            updateStreamImage();
+        }
+        function handleStreamButton()
+        {
+            var streamButton = document.getElementById("stream-button");
+            if (isStreaming == true) {
+                streamButton.innerHTML = "Start Stream";
+                isStreaming = false;
+                updateStreamImage();
+                clearInterval(timeoutUpdateFunction);
+            } else {
+                streamButton.innerHTML = "Stop Stream";
+                isStreaming = true;
+                updateRadiationAndDistanceData();
+                activateStreamVideo();
+                timeoutUpdateFunction = setInterval(function() {
+                    updateRadiationAndDistanceData();
+                }, timeoutFrequency);
+            }
+        }
+    </script>
+</html>
