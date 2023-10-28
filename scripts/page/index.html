@@ -33,7 +33,9 @@
                 max-width: 900px;
                 min-height: 800px;
                 max-height: 900px;
-                margin: auto;
+                margin-left: auto;
+                margin-right: auto;
+                margin-top: 10vh;
             }
             .row-header-title {
                 display: flex;
@@ -95,7 +97,7 @@
                 <h1>R-Probe</h1>
             </div>
             <div class="row-content-stream">
-                <img src="" id="stream-image", alt="Waiting for input...">
+                <img src="" id="stream-image", alt="Waiting for input..." width="800" height="600"></video>
             </div>
             <div class="row-sensor-values">
                 <div class="sensor-radiation">
@@ -122,11 +124,13 @@
         var dataBuffer = "0.00;0.00";
         var radiationValue = 0.00;
         var distanceValue = 0.00;
-        var timeoutUpdateFunction = null;
-        var timeoutFrequency = 1000;
-        async function retrieveSensorData() {
+        var timeoutSensorUpdateRef = null;
+        var timeoutSensorUpdateFrequency = 1000;
+        var timeoutVideoFetchRef = null;
+        var timeoutVideoFetchFrequency = 100;
+        async function retrieveSensorData(url) {
             // Retrieve data from data route
-            var response = await fetch('/data');
+            var response = await fetch(url)
             var data = await response.text();
             dataBuffer = data;
             radiationValue = dataBuffer.split(";")[0];
@@ -141,14 +145,16 @@
         }
         function updateRadiationAndDistanceData() {
             // Update radiation and distance data
-            retrieveSensorData().then(function(data) {
+            const baseUrl = document.location.origin;
+            const finalurl = `${baseUrl}/data`;
+            retrieveSensorData(finalurl).then(function(data) {
                 var radiationValue = document.getElementById("radiation-value");
                 var distanceValue = document.getElementById("distance-value");
                 radiationValue.value = getRadiationData();
                 distanceValue.value = getDistanceData();
             });
         }
-        function updateStreamImage()
+        function updateStreamImage(download)
         {
             // Capture a single frame from the stream url and render on canvas
             var streamimage = document.getElementById("stream-image");
@@ -158,6 +164,20 @@
             var baseUrl = document.location.origin;
             streamimage.alt = "";
             streamimage.src = "";
+            if (download === true) {
+                streamimage.onload = function() {
+                    var canvas = document.createElement('canvas');
+                    canvas.width = streamimage.naturalWidth;
+                    canvas.height = streamimage.naturalHeight;
+                    var context = canvas.getContext('2d');
+                    context.drawImage(streamimage, 0, 0);
+                    var link = document.createElement('a');
+                    link.download = 'image.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    streamimage.onload = null;
+                }
+            }
             streamimage.src = `${baseUrl}/photo?${Math.random().toString(36).substring(7)}`;
         }
         function activateStreamVideo()
@@ -169,39 +189,49 @@
             var baseUrl = document.location.origin;
             streamimage.alt = "";
             streamimage.src = "";
-            streamimage.src = `${baseUrl}/stream`;
+            if (timeoutVideoFetchRef != null) {
+                clearInterval(timeoutVideoFetchRef);
+                timeoutVideoFetchRef = null;
+            }
+            timeoutVideoFetchRef = setInterval(function() {
+                streamimage.src = `${baseUrl}/photo?${Math.random().toString(36).substring(7)}`;
+            }, timeoutVideoFetchFrequency);
         }
         function handleCaptureButton()
         {
-            // Retrieve a frame from stream route and sets radiation and distance data
+            // Retrieve a frame from photo route and sets radiation and distance data
             // If streaming, stop streaming by calling handleStreamButton()
             // and then update radiation and distance data
             if (isStreaming == true) {
-                handleStreamButton();
                 updateRadiationAndDistanceData();
+                handleStreamButton(true);
             }
             else
             {
                 updateRadiationAndDistanceData();
-                updateStreamImage();
+                updateStreamImage(true);
             }
         }
-        function handleStreamButton()
+        function handleStreamButton(download)
         {
             var streamButton = document.getElementById("button-stream");
             if (isStreaming == true) {
                 streamButton.innerHTML = "Start Stream";
                 isStreaming = false;
-                updateStreamImage();
-                clearInterval(timeoutUpdateFunction);
+                if (timeoutVideoFetchRef != null) {
+                    clearInterval(timeoutVideoFetchRef);
+                    timeoutVideoFetchRef = null;
+                }
+                updateStreamImage(download);
+                clearInterval(timeoutSensorUpdateRef);
             } else {
                 streamButton.innerHTML = "Stop Stream";
                 isStreaming = true;
                 updateRadiationAndDistanceData();
                 activateStreamVideo();
-                timeoutUpdateFunction = setInterval(function() {
+                timeoutSensorUpdateRef = setInterval(function() {
                     updateRadiationAndDistanceData();
-                }, timeoutFrequency);
+                }, timeoutSensorUpdateFrequency);
             }
         }
     </script>
