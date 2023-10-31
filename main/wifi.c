@@ -75,9 +75,10 @@ void wifi_ap_init(void)
    esp_netif_init();
    esp_event_loop_create_default();
    esp_netif_t * esp_netif_handler = esp_netif_create_default_wifi_ap();
-   if (esp_netif_handler != NULL)
+   if (esp_netif_handler == NULL)
    {
       ESP_LOGE(TAG, "Handler failed");
+      return;
    }
 
    esp_netif_set_default_netif(esp_netif_handler);

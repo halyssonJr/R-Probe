@@ -5,7 +5,7 @@
 
 #define I2C_PIN_SDA 21
 #define I2C_PIN_SCL 22
-#define I2C_PORT 1
+#define I2C_PORT 0
 #define XSHUT -1
 #define VL53L0X_ADDR 0x29
 #define TAG "[VL53L0X]"
@@ -13,6 +13,7 @@
 #define VL53L0X_TASK_STACK_SIZE 4096
 #define VL53L0X_TASK_PRIORITY   3
 #define VL53L0X_MESSAGE_BUFFER_SIZE 100
+
 vl53l0x_t * vl53l0x_cfg;
 TaskHandle_t vl53l0x_handler;
 MessageBufferHandle_t xmsg_buffer;
