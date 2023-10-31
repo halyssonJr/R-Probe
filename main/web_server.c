@@ -101,19 +101,114 @@ static esp_err_t stream_handler(httpd_req_t *req)
     return res;
 }
 
+static esp_err_t photo_handler(httpd_req_t *req)
+{
+    camera_fb_t * fb = NULL;
+    esp_err_t res = ESP_OK;
+    
+    size_t _jpg_buf_len;
+    uint8_t * _jpg_buf;
+    char* content_length[16];
+
+    static int64_t last_frame = 0;
+    if (!last_frame) 
+    {
+        last_frame = esp_timer_get_time();
+    }
+    res = httpd_resp_set_type(req, "image/jpeg");
+    res = httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    res = httpd_resp_set_hdr(req, "Pragma", "no-cache");
+    res = httpd_resp_set_hdr(req, "Expires", "0");
+    if (res != ESP_OK)
+    {
+        return res;
+    }
+    fb = esp_camera_fb_get();
+    if (!fb) 
+    {
+        ESP_LOGE(TAG, "Camera capture failed");
+        res = ESP_FAIL;
+    }
+    if (fb->format != PIXFORMAT_JPEG)   
+    {
+        if(!frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len))
+        {
+            ESP_LOGE(TAG, "JPEG compression failed");
+            esp_camera_fb_return(fb);
+            res = ESP_FAIL;
+        }
+    } 
+    else 
+    {
+        _jpg_buf_len = fb->len;
+        _jpg_buf = fb->buf;
+    }
+    if (res == ESP_OK)
+    {
+        // size_t hlen = snprintf((char *)part_buf, 64, _PHOTO_PART, _jpg_buf_len);
+        //res = httpd_resp_send_chunk(req, (const char *)part_buf, hlen);
+        snprintf((char*)content_length, 10, "%d", _jpg_buf_len);
+        res = httpd_resp_set_hdr(req, (const char *)"Content-Length", (const char*) content_length);
+    }
+    if (res == ESP_OK)
+    {
+        //res = httpd_resp_send_chunk(req, (const char *)_jpg_buf, _jpg_buf_len);
+        res = httpd_resp_send(req, (const char *)_jpg_buf, _jpg_buf_len);
+    }
+    if (fb->format != PIXFORMAT_JPEG)
+    {
+        free(_jpg_buf);
+    }
+    esp_camera_fb_return(fb);
+
+    int64_t fr_end = esp_timer_get_time();
+    int64_t frame_time = fr_end - last_frame;
+    last_frame = fr_end;
+    frame_time /= 1000;
+    last_frame = 0;
+    return res;
+}
+
+static esp_err_t data_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "text/raw; charset=utf-8");
+    char data[256];
+    // random values
+    double radiation = rand() % 100;
+    double temperature = rand() % 100;
+    const char* _FORMAT = "%0.2f;%0.2f";
+    snprintf(data, 256, _FORMAT, radiation, temperature);
+    return httpd_resp_send(req, (const char *)data, strlen(data));
+}
+
 static esp_err_t index_handler(httpd_req_t *req)
 {
-    httpd_resp_set_type(req, "text/html");
+    httpd_resp_set_type(req, "text/html; charset=utf-8");
     httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
     return httpd_resp_send(req, (const char *)index_html_gz, index_html_gz_len);
-
 }
 
 httpd_uri_t uri_get = 
 {
-    .uri = "/",
+    .uri = "/stream",
     .method = HTTP_GET,
     .handler = stream_handler,
+    .user_ctx = NULL
+};
+
+httpd_uri_t photo_get =
+{
+    .uri = "/photo",
+    .method = HTTP_GET,
+    .handler = photo_handler,
+    .user_ctx = NULL
+};
+
+httpd_uri_t data_get =
+{
+    .uri = "/data",
+    .method = HTTP_GET,
+    .handler = data_handler,
     .user_ctx = NULL
 };
 
@@ -133,7 +228,9 @@ httpd_handle_t setup_server(void)
     if (httpd_start(&stream_httpd , &config) == ESP_OK)
     {
         httpd_register_uri_handler(stream_httpd , &uri_get);
-        // httpd_register_uri_handler(stream_httpd, &index_uri);
+        httpd_register_uri_handler(stream_httpd, &photo_get);
+        httpd_register_uri_handler(stream_httpd, &data_get);
+        httpd_register_uri_handler(stream_httpd, &index_uri);
     }
 
     return stream_httpd;

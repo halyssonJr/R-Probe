@@ -22,7 +22,7 @@ def from_file_to_hex_string(file: bytearray):
     for byte in file:
         hex_string += hex(byte) + ','
     print('count: ', len(file))
-    return hex_string
+    return hex_string, len(file)
     
 
 if __name__ == '__main__':
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     if args.mode == 'compress':
         with open(args.input_file, 'rb') as f:
             file = f.read()
-        hex_string = from_file_to_hex_string(file)
+        hex_string, count = from_file_to_hex_string(file)
         with open(args.output_file, 'w') as f:
             f.write(hex_string)
     elif args.mode == 'decompress':
